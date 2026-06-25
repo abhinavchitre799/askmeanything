@@ -349,18 +349,57 @@ Provider errors are mapped to typed codes (`invalid_api_key`, `rate_limited`,
 ## Security & privacy
 
 - API keys are never exposed to the browser; all LLM calls are server-side.
-- The widget only calls our own backend APIs.
+- Per-project LLM keys are encrypted at rest (AES-256-GCM) and never returned by
+  the API — only a masked hint (`••••••••cTyo`) is shown.
+- The widget only calls our own backend APIs and only ever sends a public
+  `projectId` — no secrets reach the page.
 - Project IDs are validated and retrieval is strictly scoped per project — chunks
   never cross project boundaries.
 - Raw internal errors are not exposed to visitors.
 - Only necessary conversation data is stored. No visitor contact info, no leads.
+
+## Authentication & multi-tenancy (known gap — by design for the MVP)
+
+**The admin dashboard and management APIs are currently unauthenticated.** This
+was a deliberate MVP scope decision (auth was explicitly out of scope), but it
+means that as deployed today, anyone who can reach the app could list projects,
+view conversations, and overwrite a project's stored API key. **Do not expose
+this publicly as-is** — it is safe for local development and demos only.
+
+What is *not* exposed even without auth: stored API keys are encrypted and never
+returned in plaintext, and the public surface (`widget.js` + `POST /api/chat`)
+only accepts a `projectId` and carries no secrets — so the embeddable widget is
+safe to ship cross-domain.
+
+### The intended production design
+
+The data model already includes `Organization → Project`; the missing piece is
+identity and scoping:
+
+1. **Authentication** — user accounts via Auth.js/NextAuth (email magic-link or
+   Google/GitHub OAuth).
+2. **Tenant scoping** — associate each user with an `Organization` and filter
+   *every* admin query by the session's org, so a user only sees their own
+   projects, keys, and conversations (today everything uses a single shared org).
+3. **Route protection** — middleware that gates the admin pages and management
+   routes (`/api/projects`, `/api/sources`, `/api/upload`, `/api/crawl`,
+   `/api/admin/*`, `/api/projects/[id]/llm`), leaving **only** `/api/chat` and
+   `widget.js` public.
+4. *(optional)* **Org-scoped API tokens** for programmatic setup via a management
+   API / CLI.
+
+This is the first item under [Next steps](#next-steps) and is required before any
+multi-tenant production deployment.
 
 ---
 
 ## Known limitations
 
 - **No authentication on the admin** — anyone who can reach `/admin` can manage
-  projects. **TODO: add auth before production.**
+  projects and overwrite stored keys. Deliberate MVP scope cut; required before
+  any public deployment. See
+  [Authentication & multi-tenancy](#authentication--multi-tenancy-known-gap--by-design-for-the-mvp)
+  for the full gap analysis and intended design.
 - Crawls and uploads run **inline in the request** (background promise for
   crawls). For real scale, move to a proper job queue/worker. (Marked TODO in
   `app/api/crawl/route.ts`.)
