@@ -12,6 +12,7 @@ import {
   StatusMessage,
 } from "@/components/admin/ui";
 import { useSelectedProject } from "@/components/admin/ProjectContext";
+import { AiSettings } from "@/components/admin/AiSettings";
 
 type CrawlJob = {
   status: string;
@@ -217,6 +218,9 @@ export default function SourcesPage() {
           Active project: <code className="font-mono">{projectId}</code>
         </p>
       </div>
+
+      {/* AI provider / API key (Bring Your Own Key) */}
+      <AiSettings projectId={projectId} />
 
       {/* Section A — add website / sitemap */}
       <Card>

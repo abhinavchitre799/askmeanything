@@ -8,6 +8,9 @@ tag. Answers are grounded in retrieved content and cite their sources.
 If the knowledge base can't answer a question, the widget **crawls your website
 on demand** to look for the answer, indexes what it finds, and tries again.
 
+> New here? Read **[PRODUCT.md](PRODUCT.md)** for a plain-language overview of
+> what this does and who it's for.
+
 ---
 
 ## What it does
@@ -102,15 +105,20 @@ npm run dev                   # http://localhost:3000
 DATABASE_URL=                 # postgres connection string
 APP_URL=                      # e.g. http://localhost:3000
 
-LLM_PROVIDER=                 # "openai-compatible" | "google-gemini"
+# Encrypts per-project API keys at rest. REQUIRED in production.
+APP_ENCRYPTION_KEY=           # openssl rand -hex 32
 
-# OpenAI-compatible provider
+# --- Global LLM provider: OPTIONAL local-dev fallback only ---
+# Primary path is per-project Bring Your Own Key set in the admin UI.
+LLM_PROVIDER=                 # "" | "openai-compatible" | "google-gemini"
+
+# OpenAI-compatible provider (fallback)
 LLM_API_BASE_URL=
 LLM_API_KEY=
 LLM_CHAT_MODEL=
 LLM_EMBEDDING_MODEL=
 
-# Google Gemini provider
+# Google Gemini provider (fallback)
 GOOGLE_GEMINI_API_KEY=
 GOOGLE_GEMINI_CHAT_MODEL=
 GOOGLE_GEMINI_EMBEDDING_MODEL=
@@ -128,45 +136,72 @@ exposed to the browser or the widget.
 
 ---
 
-## Using a free hosted model
+## Bring Your Own API key (per project)
 
-The app supports the **Google Gemini API** as a free-tier hosted model option,
-so you can run the whole MVP without paying for an LLM.
+**Each project supplies its own LLM API key** — the app never ships a shared key
+and never pays for anyone's usage. This is the intended model for a public /
+multi-tenant deployment.
 
-1. Create an API key at <https://aistudio.google.com/apikey>.
-2. Set in `.env`:
+How it works:
 
-   ```bash
-   LLM_PROVIDER="google-gemini"
-   GOOGLE_GEMINI_API_KEY="..."
-   GOOGLE_GEMINI_CHAT_MODEL="your-gemini-chat-model"
-   GOOGLE_GEMINI_EMBEDDING_MODEL="your-gemini-embedding-model"
-   ```
+- In the admin, open **Sources → "AI provider & API key"** for the selected
+  project. Choose a provider, paste your key, set the chat + embedding models,
+  and save.
+- The key is **encrypted at rest** (AES-256-GCM, see `lib/crypto.ts`) using
+  `APP_ENCRYPTION_KEY`, stored in the `ProjectLlmConfig` table, and **never
+  returned to the browser** — the admin only sees a masked hint like
+  `••••••••cTyo`. All LLM calls happen server-side.
+- At request time the app resolves the project's stored config; the global env
+  variables are only a **fallback for local dev** when a project has no key.
+- The embedding column is dimensionless, so different projects can use different
+  embedding models (Gemini 768-dim, OpenAI 1536-dim, …) in the same database.
+  Changing a project's embedding model clears its indexed content so it
+  re-indexes consistently (the admin warns you).
 
-   Working model values to try: chat `gemini-2.0-flash`, embedding
-   `text-embedding-004` (768-dim — matches the default migration).
+> Set `APP_ENCRYPTION_KEY` (e.g. `openssl rand -hex 32`) before storing real
+> keys in production. Without it, an insecure dev key is used and a warning is
+> logged.
 
-> Free tiers are **rate-limited and may change** without notice. Model names are
-> read from environment variables and are never hardcoded, so you can swap them
-> at any time without code changes. If you hit a rate limit the API returns a
-> clear "rate limited" error.
+### Using the free Google Gemini tier
 
-## Using an OpenAI-compatible provider instead
+1. Create a free key at <https://aistudio.google.com/apikey>.
+2. In the project's **AI provider & API key** form choose **Google Gemini**,
+   paste the key, and use models like chat `gemini-2.5-flash`, embedding
+   `gemini-embedding-001` (768-dim).
+
+> Free tiers are **rate-limited and may change** without notice, and a brand-new
+> key's Google Cloud project can occasionally need a moment (or a fresh project)
+> before generation quota is active. Model names are read from config, never
+> hardcoded, so you can swap them anytime.
+
+### Using an OpenAI-compatible provider
 
 Works with OpenAI, Together, Groq, OpenRouter, Ollama, LM Studio, etc. — anything
-exposing `/chat/completions` and `/embeddings`.
+exposing `/chat/completions` and `/embeddings`. In the form choose
+**OpenAI-compatible** and set the base URL (e.g. `https://api.openai.com/v1`),
+key, chat model (`gpt-4o-mini`), embedding model (`text-embedding-3-small`), and
+dimension (`1536`).
+
+Switching providers is **config-only** — no application code changes. The entire
+app depends on the generic interface in `lib/llm/types.ts`; the concrete client
+is built from each project's resolved config in `lib/llm/index.ts`.
+
+### Optional: a global fallback key (local dev only)
+
+For quick local testing you can set a single global provider in `.env` instead
+of configuring each project (used only when a project has no key of its own):
 
 ```bash
-LLM_PROVIDER="openai-compatible"
-LLM_API_BASE_URL="https://api.openai.com/v1"   # or your provider's base URL
-LLM_API_KEY="..."
-LLM_CHAT_MODEL="gpt-4o-mini"
-LLM_EMBEDDING_MODEL="text-embedding-3-small"   # 1536-dim -> update the migration!
+LLM_PROVIDER="google-gemini"          # or "openai-compatible"
+GOOGLE_GEMINI_API_KEY="..."
+GOOGLE_GEMINI_CHAT_MODEL="gemini-2.5-flash"
+GOOGLE_GEMINI_EMBEDDING_MODEL="gemini-embedding-001"
+# OpenAI-compatible equivalents:
+# LLM_API_BASE_URL / LLM_API_KEY / LLM_CHAT_MODEL / LLM_EMBEDDING_MODEL
 ```
 
-Switching providers is **environment-only** — no application code changes. The
-entire app depends on the generic interface in `lib/llm/types.ts`; the concrete
-provider is chosen in `lib/llm/index.ts` from `LLM_PROVIDER`.
+In a shared/public deployment, leave these blank so every project must bring its
+own key.
 
 ---
 

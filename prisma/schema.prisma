@@ -37,10 +37,28 @@ model Project {
   conversations  Conversation[]
   crawlJobs      CrawlJob[]
   widgetSettings WidgetSettings?
+  llmConfig      ProjectLlmConfig?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   @@index([organizationId])
+}
+
+// Per-project, user-supplied LLM credentials (Bring Your Own Key). The API key
+// is stored encrypted (see lib/crypto.ts) and never returned to the browser.
+// When absent, the app falls back to the global env config (local dev only).
+model ProjectLlmConfig {
+  id                 String   @id @default(cuid())
+  projectId          String   @unique
+  project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  provider           String   // "openai-compatible" | "google-gemini"
+  apiKeyEncrypted    String   // AES-256-GCM "iv:tag:ciphertext"
+  chatModel          String
+  embeddingModel     String
+  apiBaseUrl         String?  // openai-compatible only
+  embeddingDimension Int      @default(768)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 // type: website | sitemap | upload | manual

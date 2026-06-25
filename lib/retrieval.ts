@@ -7,7 +7,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { getLlmClient } from "@/lib/llm";
+import { getLlmClientForProject } from "@/lib/llm";
 
 export interface RetrievedChunk {
   chunkId: string;
@@ -49,7 +49,8 @@ export async function searchChunks(
   const { projectId, query } = args;
   const topK = args.topK ?? 5;
 
-  const embedding = await getLlmClient().createEmbedding(query);
+  const llm = await getLlmClientForProject(projectId);
+  const embedding = await llm.createEmbedding(query);
   const vec = toVectorString(embedding);
 
   const rows = await prisma.$queryRaw<ChunkRow[]>`

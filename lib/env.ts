@@ -6,6 +6,8 @@
  * than reading process.env directly elsewhere.
  */
 
+import type { LlmConfig } from "@/lib/llm/types";
+
 export type LlmProvider = "openai-compatible" | "google-gemini";
 
 function required(name: string): string {
@@ -34,45 +36,52 @@ export function getAppUrl(): string {
   return process.env.APP_URL?.trim() || "http://localhost:3000";
 }
 
-export function getLlmProvider(): LlmProvider {
-  const value = process.env.LLM_PROVIDER?.trim();
-  if (!value) {
-    throw new Error(
-      "Missing required environment variable: LLM_PROVIDER. " +
-        'Set it to "openai-compatible" or "google-gemini".'
-    );
-  }
-  if (value !== "openai-compatible" && value !== "google-gemini") {
-    throw new Error(
-      `Unsupported LLM_PROVIDER "${value}". ` +
-        'Allowed values are "openai-compatible" or "google-gemini".'
-    );
-  }
-  return value;
+function optionalString(name: string): string | undefined {
+  const v = process.env[name]?.trim();
+  return v ? v : undefined;
 }
 
-/** Config for the OpenAI-compatible provider. Validated lazily on first use. */
-export function getOpenAiCompatibleConfig() {
-  return {
-    baseUrl: required("LLM_API_BASE_URL").replace(/\/+$/, ""),
-    apiKey: required("LLM_API_KEY"),
-    chatModel: required("LLM_CHAT_MODEL"),
-    embeddingModel: required("LLM_EMBEDDING_MODEL"),
-  };
-}
-
-/** Config for the Google Gemini provider. Validated lazily on first use. */
-export function getGeminiConfig() {
-  return {
-    apiKey: required("GOOGLE_GEMINI_API_KEY"),
-    chatModel: required("GOOGLE_GEMINI_CHAT_MODEL"),
-    embeddingModel: required("GOOGLE_GEMINI_EMBEDDING_MODEL"),
-  };
-}
-
-/** Vector dimension used by pgvector. Must match the embedding model output. */
+/** Vector dimension for the env fallback config. */
 export function getEmbeddingDimension(): number {
   return optionalNumber("EMBEDDING_DIMENSION", 768);
+}
+
+/**
+ * Optional global LLM config built from environment variables. This is only a
+ * FALLBACK for local development; the primary path is per-project credentials
+ * (Bring Your Own Key) stored in the database. Returns null when env is not
+ * fully configured — it never throws, because a missing fallback is normal.
+ */
+export function getEnvLlmConfig(): LlmConfig | null {
+  const provider = optionalString("LLM_PROVIDER");
+  if (provider === "google-gemini") {
+    const apiKey = optionalString("GOOGLE_GEMINI_API_KEY");
+    const chatModel = optionalString("GOOGLE_GEMINI_CHAT_MODEL");
+    const embeddingModel = optionalString("GOOGLE_GEMINI_EMBEDDING_MODEL");
+    if (!apiKey || !chatModel || !embeddingModel) return null;
+    return {
+      provider: "google-gemini",
+      apiKey,
+      chatModel,
+      embeddingModel,
+      embeddingDimension: getEmbeddingDimension(),
+    };
+  }
+  if (provider === "openai-compatible") {
+    const baseUrl = optionalString("LLM_API_BASE_URL");
+    const apiKey = optionalString("LLM_API_KEY");
+    const chatModel = optionalString("LLM_CHAT_MODEL");
+    const embeddingModel = optionalString("LLM_EMBEDDING_MODEL");
+    if (!baseUrl || !apiKey || !chatModel || !embeddingModel) return null;
+    return {
+      provider: "openai-compatible",
+      baseUrl: baseUrl.replace(/\/+$/, ""),
+      apiKey,
+      chatModel,
+      embeddingModel,
+    };
+  }
+  return null;
 }
 
 /** Max pages a single crawl job will fetch (MVP safety limit). */

@@ -17,6 +17,27 @@ export interface ChatCompletionArgs {
   maxTokens?: number;
 }
 
+/**
+ * Fully-resolved LLM configuration for a single project. Built either from the
+ * project's stored Bring-Your-Own-Key settings or from global env defaults.
+ * Clients receive this explicitly — they never read env directly.
+ */
+export type LlmConfig =
+  | {
+      provider: "google-gemini";
+      apiKey: string;
+      chatModel: string;
+      embeddingModel: string;
+      embeddingDimension: number;
+    }
+  | {
+      provider: "openai-compatible";
+      apiKey: string;
+      baseUrl: string;
+      chatModel: string;
+      embeddingModel: string;
+    };
+
 export interface LlmClient {
   /** Embed a single piece of text into a numeric vector. */
   createEmbedding(text: string): Promise<number[]>;

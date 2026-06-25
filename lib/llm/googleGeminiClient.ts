@@ -3,13 +3,15 @@
  * Auth is via the `?key=` query parameter. Config comes from env helpers.
  */
 
-import { getGeminiConfig } from "@/lib/env";
 import {
   ChatCompletionArgs,
   ChatMessage,
   LlmClient,
+  LlmConfig,
   LlmError,
 } from "./types";
+
+type GeminiConfig = Extract<LlmConfig, { provider: "google-gemini" }>;
 
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 const CHAT_TIMEOUT_MS = 60_000;
@@ -119,8 +121,10 @@ function toGeminiPayload(messages: ChatMessage[]): {
 }
 
 export class GoogleGeminiClient implements LlmClient {
+  constructor(private readonly config: GeminiConfig) {}
+
   async createChatCompletion(args: ChatCompletionArgs): Promise<string> {
-    const { apiKey, chatModel } = getGeminiConfig();
+    const { apiKey, chatModel } = this.config;
 
     const { systemInstruction, contents } = toGeminiPayload(args.messages);
 
@@ -179,16 +183,19 @@ export class GoogleGeminiClient implements LlmClient {
   }
 
   async createEmbedding(text: string): Promise<number[]> {
-    const { apiKey, embeddingModel } = getGeminiConfig();
+    const { apiKey, embeddingModel, embeddingDimension } = this.config;
 
     const res = await fetchWithTimeout(
       `${BASE_URL}/models/${embeddingModel}:embedContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // outputDimensionality pins the vector size to the pgvector column
+        // (some models, e.g. gemini-embedding-001, default to 3072).
         body: JSON.stringify({
           model: `models/${embeddingModel}`,
           content: { parts: [{ text }] },
+          outputDimensionality: embeddingDimension,
         }),
       },
       EMBEDDING_TIMEOUT_MS
@@ -210,6 +217,6 @@ export class GoogleGeminiClient implements LlmClient {
   }
 }
 
-export function createGoogleGeminiClient(): LlmClient {
-  return new GoogleGeminiClient();
+export function createGoogleGeminiClient(config: GeminiConfig): LlmClient {
+  return new GoogleGeminiClient(config);
 }

@@ -9,7 +9,7 @@
 import { createHash, randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { chunkText } from "@/lib/chunkText";
-import { getLlmClient } from "@/lib/llm";
+import { getLlmClientForProject } from "@/lib/llm";
 
 export interface IngestTextArgs {
   projectId: string;
@@ -74,7 +74,7 @@ export async function ingestText(
 
   try {
     const chunks = chunkText(text);
-    const llm = getLlmClient();
+    const llm = await getLlmClientForProject(projectId);
 
     for (const chunk of chunks) {
       const embedding = await llm.createEmbedding(chunk.content);

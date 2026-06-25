@@ -1,15 +1,17 @@
 /**
  * OpenAI-compatible LLM client (OpenAI, Together, Groq, LocalAI, etc.).
  * Uses raw `fetch` against the standard /chat/completions and /embeddings
- * endpoints — no provider SDK. All config comes from env helpers.
+ * endpoints — no provider SDK. Config is supplied explicitly per project.
  */
 
-import { getOpenAiCompatibleConfig } from "@/lib/env";
 import {
   ChatCompletionArgs,
   LlmClient,
+  LlmConfig,
   LlmError,
 } from "./types";
+
+type OpenAiConfig = Extract<LlmConfig, { provider: "openai-compatible" }>;
 
 const CHAT_TIMEOUT_MS = 60_000;
 const EMBEDDING_TIMEOUT_MS = 30_000;
@@ -80,8 +82,10 @@ async function parseJson(res: Response): Promise<unknown> {
 }
 
 export class OpenAiCompatibleClient implements LlmClient {
+  constructor(private readonly config: OpenAiConfig) {}
+
   async createChatCompletion(args: ChatCompletionArgs): Promise<string> {
-    const { baseUrl, apiKey, chatModel } = getOpenAiCompatibleConfig();
+    const { baseUrl, apiKey, chatModel } = this.config;
 
     const body: Record<string, unknown> = {
       model: chatModel,
@@ -121,7 +125,7 @@ export class OpenAiCompatibleClient implements LlmClient {
   }
 
   async createEmbedding(text: string): Promise<number[]> {
-    const { baseUrl, apiKey, embeddingModel } = getOpenAiCompatibleConfig();
+    const { baseUrl, apiKey, embeddingModel } = this.config;
 
     const res = await fetchWithTimeout(
       `${baseUrl}/embeddings`,
@@ -152,6 +156,6 @@ export class OpenAiCompatibleClient implements LlmClient {
   }
 }
 
-export function createOpenAiCompatibleClient(): LlmClient {
-  return new OpenAiCompatibleClient();
+export function createOpenAiCompatibleClient(config: OpenAiConfig): LlmClient {
+  return new OpenAiCompatibleClient(config);
 }

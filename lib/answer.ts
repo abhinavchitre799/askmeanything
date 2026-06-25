@@ -8,7 +8,7 @@
  * widget answer from the live site even when nothing was pre-indexed.
  */
 
-import { getLlmClient } from "@/lib/llm";
+import { getLlmClientForProject } from "@/lib/llm";
 import {
   SYSTEM_PROMPT,
   NO_CONTEXT_FALLBACK,
@@ -137,7 +137,8 @@ export async function generateAnswer(
     sourceUrl: chunk.sourceUrl,
   }));
 
-  const answer = await getLlmClient().createChatCompletion({
+  const llm = await getLlmClientForProject(projectId);
+  const answer = await llm.createChatCompletion({
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: buildAnswerUserMessage(question, contextChunks) },

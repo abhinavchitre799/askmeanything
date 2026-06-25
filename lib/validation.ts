@@ -35,6 +35,22 @@ export const chatRequestSchema = z.object({
     .min(1, "at least one message is required"),
 });
 
+export const llmConfigSchema = z
+  .object({
+    provider: z.enum(["google-gemini", "openai-compatible"]),
+    apiKey: z.string().min(1, "apiKey is required"),
+    chatModel: z.string().min(1, "chatModel is required"),
+    embeddingModel: z.string().min(1, "embeddingModel is required"),
+    apiBaseUrl: z.string().url("apiBaseUrl must be a valid URL").optional(),
+    embeddingDimension: z.coerce.number().int().positive().optional(),
+  })
+  .refine(
+    (v) => v.provider !== "openai-compatible" || !!v.apiBaseUrl,
+    { message: "apiBaseUrl is required for openai-compatible", path: ["apiBaseUrl"] }
+  );
+
+export type LlmConfigInput = z.infer<typeof llmConfigSchema>;
+
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type CreateSourceInput = z.infer<typeof createSourceSchema>;
 export type CreateCrawlInput = z.infer<typeof createCrawlSchema>;
