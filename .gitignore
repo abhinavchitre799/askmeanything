@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+build
+.env
+.env.local
+*.log
+.DS_Store
+widget/dist
+next-env.d.ts.timestamp
+/public/widget.js
+/public/widget.js.map
+
+*.tsbuildinfo

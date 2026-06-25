@@ -1,0 +1,40 @@
+{
+  "name": "askmeanything-widget",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Embeddable AI website Q&A widget with a knowledge base built from website content and uploaded documents.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "npm run build:widget && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "build:widget": "tsx widget/build-widget.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "db:setup": "prisma migrate deploy && prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "cheerio": "^1.0.0",
+    "mammoth": "^1.8.0",
+    "next": "^14.2.15",
+    "pdf-parse": "^1.1.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.11",
+    "@types/pdf-parse": "^1.1.4",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "esbuild": "^0.24.0",
+    "postcss": "^8.4.47",
+    "prisma": "^5.22.0",
+    "tailwindcss": "^3.4.14",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
+}

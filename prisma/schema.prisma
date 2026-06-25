@@ -1,0 +1,156 @@
+// Prisma schema for the AskMeAnything embeddable Q&A widget.
+//
+// NOTE on vectors: Prisma has no first-class pgvector type, so the
+// `DocumentChunk.embedding` column is declared as `Unsupported("vector")`.
+// We read/write it via raw SQL in lib/retrieval.ts and lib/documents.ts.
+// The vector column + ivfflat index are created by the SQL migration in
+// prisma/migrations (see 0001_init).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  projects  Project[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Project {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  domain         String?
+  sources        Source[]
+  documents      Document[]
+  chunks         DocumentChunk[]
+  conversations  Conversation[]
+  crawlJobs      CrawlJob[]
+  widgetSettings WidgetSettings?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+// type: website | sitemap | upload | manual
+model Source {
+  id           String     @id @default(cuid())
+  projectId    String
+  project      Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type         String
+  url          String?
+  title        String?
+  status       String     @default("pending") // pending | crawling | ready | error
+  lastSyncedAt DateTime?
+  documents    Document[]
+  crawlJobs    CrawlJob[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([projectId])
+}
+
+model Document {
+  id          String          @id @default(cuid())
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceId    String
+  source      Source          @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  title       String?
+  url         String?
+  fileName    String?
+  contentHash String?
+  status      String          @default("pending") // pending | indexed | error
+  chunks      DocumentChunk[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([projectId])
+  @@index([sourceId])
+  @@index([projectId, contentHash])
+}
+
+model DocumentChunk {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  content     String
+  // pgvector column. Dimension is enforced by the SQL migration, not Prisma.
+  embedding   Unsupported("vector")?
+  tokenCount  Int      @default(0)
+  chunkIndex  Int      @default(0)
+  sourceTitle String?
+  sourceUrl   String?
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+  @@index([documentId])
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  visitorId String
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([projectId, visitorId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String       // user | assistant | system
+  content        String
+  sourcesJson    Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+model WidgetSettings {
+  id             String   @id @default(cuid())
+  projectId      String   @unique
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  welcomeMessage String   @default("Hi! Ask me anything about this site.")
+  accentColor    String   @default("#4f46e5")
+  position       String   @default("bottom-right") // bottom-right | bottom-left
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model CrawlJob {
+  id           String    @id @default(cuid())
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceId     String
+  source       Source    @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  status       String    @default("queued") // queued | running | completed | failed
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  pagesFound   Int       @default(0)
+  pagesIndexed Int       @default(0)
+  errorMessage String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([sourceId])
+}

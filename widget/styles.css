@@ -1,0 +1,394 @@
+/*
+ * AskMeAnything embeddable widget styles.
+ *
+ * All selectors are scoped under `.ama-root`. The widget renders inside a
+ * Shadow DOM so these styles are already isolated from the host page, but the
+ * `.ama-root` scoping keeps things tidy and predictable.
+ *
+ * Theme via the `--ama-accent` CSS variable (set on `.ama-root`).
+ */
+
+.ama-root {
+  /* Theming */
+  --ama-accent: #4f46e5;
+  --ama-accent-contrast: #ffffff;
+  --ama-bg: #ffffff;
+  --ama-fg: #1f2937;
+  --ama-muted: #6b7280;
+  --ama-border: #e5e7eb;
+  --ama-user-bg: var(--ama-accent);
+  --ama-user-fg: var(--ama-accent-contrast);
+  --ama-assistant-bg: #f3f4f6;
+  --ama-assistant-fg: #1f2937;
+  --ama-error-bg: #fef2f2;
+  --ama-error-fg: #b91c1c;
+  --ama-error-border: #fecaca;
+  --ama-radius: 16px;
+  --ama-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
+
+  /* Reset baseline so host styles never leak in oddly. */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ama-fg);
+  box-sizing: border-box;
+}
+
+.ama-root *,
+.ama-root *::before,
+.ama-root *::after {
+  box-sizing: border-box;
+}
+
+/* ---------- Floating bubble ---------- */
+
+.ama-bubble {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background: var(--ama-accent);
+  color: var(--ama-accent-contrast);
+  box-shadow: var(--ama-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2147483000;
+  padding: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ama-bubble:hover {
+  transform: translateY(-2px) scale(1.03);
+}
+
+.ama-bubble:focus-visible {
+  outline: 3px solid rgba(0, 0, 0, 0.25);
+  outline-offset: 2px;
+}
+
+.ama-bubble svg {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+.ama-bubble.ama-hidden {
+  display: none;
+}
+
+/* ---------- Chat panel ---------- */
+
+.ama-panel {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  height: 70vh;
+  max-height: 640px;
+  background: var(--ama-bg);
+  border-radius: var(--ama-radius);
+  box-shadow: var(--ama-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 2147483001;
+  border: 1px solid var(--ama-border);
+}
+
+.ama-panel.ama-hidden {
+  display: none;
+}
+
+/* ---------- Header ---------- */
+
+.ama-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--ama-accent);
+  color: var(--ama-accent-contrast);
+  flex: 0 0 auto;
+}
+
+.ama-header__title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.ama-close {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  opacity: 0.9;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.ama-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  opacity: 1;
+}
+
+.ama-close:focus-visible {
+  outline: 2px solid var(--ama-accent-contrast);
+  outline-offset: 1px;
+}
+
+.ama-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- Messages area ---------- */
+
+.ama-messages {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--ama-bg);
+}
+
+.ama-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 85%;
+}
+
+.ama-msg--user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.ama-msg--assistant {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.ama-msg__bubble {
+  padding: 10px 12px;
+  border-radius: 14px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.ama-msg--user .ama-msg__bubble {
+  background: var(--ama-user-bg);
+  color: var(--ama-user-fg);
+  border-bottom-right-radius: 4px;
+}
+
+.ama-msg--assistant .ama-msg__bubble {
+  background: var(--ama-assistant-bg);
+  color: var(--ama-assistant-fg);
+  border-bottom-left-radius: 4px;
+}
+
+/* ---------- Sources ---------- */
+
+.ama-sources {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 100%;
+}
+
+.ama-sources__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ama-muted);
+  margin-bottom: 1px;
+}
+
+.ama-source {
+  font-size: 12px;
+  color: var(--ama-accent);
+  text-decoration: none;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.ama-source[href] {
+  text-decoration: underline;
+}
+
+.ama-source:not([href]) {
+  color: var(--ama-muted);
+  cursor: default;
+}
+
+/* ---------- Typing / loading indicator ---------- */
+
+.ama-typing {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 14px;
+  background: var(--ama-assistant-bg);
+  border-radius: 14px;
+  border-bottom-left-radius: 4px;
+}
+
+.ama-typing__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ama-muted);
+  opacity: 0.6;
+  animation: ama-blink 1.2s infinite ease-in-out both;
+}
+
+.ama-typing__dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.ama-typing__dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes ama-blink {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.7);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ---------- Error banner ---------- */
+
+.ama-error {
+  margin: 0 16px 8px;
+  padding: 10px 12px;
+  background: var(--ama-error-bg);
+  color: var(--ama-error-fg);
+  border: 1px solid var(--ama-error-border);
+  border-radius: 10px;
+  font-size: 13px;
+  flex: 0 0 auto;
+}
+
+.ama-error.ama-hidden {
+  display: none;
+}
+
+/* ---------- Input row ---------- */
+
+.ama-input-row {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--ama-border);
+  background: var(--ama-bg);
+}
+
+.ama-input {
+  flex: 1 1 auto;
+  resize: none;
+  border: 1px solid var(--ama-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ama-fg);
+  background: var(--ama-bg);
+  max-height: 120px;
+  min-height: 40px;
+  outline: none;
+}
+
+.ama-input:focus {
+  border-color: var(--ama-accent);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+}
+
+.ama-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ama-send {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+  background: var(--ama-accent);
+  color: var(--ama-accent-contrast);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.ama-send:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.ama-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ama-send:focus-visible {
+  outline: 2px solid var(--ama-accent);
+  outline-offset: 2px;
+}
+
+.ama-send svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ---------- Responsive: near-fullscreen on small screens ---------- */
+
+@media (max-width: 480px) {
+  .ama-panel {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    border-radius: 0;
+    border: none;
+  }
+
+  .ama-bubble {
+    bottom: 16px;
+    right: 16px;
+  }
+}
